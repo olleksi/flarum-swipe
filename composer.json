@@ -1,13 +1,23 @@
 {
     "name": "olleksi/flarum-swipe",
-    "description": "Swipe gestures for Flarum",
+    "description": "Радісно ковзай по екрану",
     "type": "flarum-extension",
     "require": {
         "flarum/core": "^1.0"
     },
     "extra": {
         "flarum-extension": {
-            "title": "Swipe"
+            "title": "Swipe",
+            "icon": {
+                "name": "fas fa-arrows-alt-h",
+                "backgroundColor": "#0073e6",
+                "color": "#fff"
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Olleksi\\FlarumSwipe\\": "src/"
         }
     }
 }
