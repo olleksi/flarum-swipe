@@ -1,0 +1,143 @@
+/**
+ * Flarum Swipe Gestures Extension Styles
+ */
+
+/* Swipe indicator for dropdowns */
+.swipe-indicator {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background-color: var(--primary-color);
+    z-index: 1001;
+    cursor: grab;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.swipe-indicator:hover {
+    opacity: 1;
+}
+
+.swipe-indicator:active {
+    cursor: grabbing;
+}
+
+/* Dropdown menu adjustments */
+.Dropdown-menu {
+    padding-top: 20px !important;
+    border-radius: 16px 16px 0 0;
+    position: relative;
+    overflow-y: auto;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    touch-action: pan-y;
+}
+
+.Dropdown-menu.is-dragging {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* App content swipe animations */
+.App-content {
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.App-content.swiped {
+    transform: translateX(250px);
+    opacity: 0.5;
+}
+
+.App-content.permanently-swiped {
+    opacity: 0.3;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .swipe-indicator {
+        background-color: var(--primary-color) !important;
+        opacity: 0.8;
+    }
+    
+    .Dropdown-menu {
+        border-radius: 23px 23px 0 0;
+        max-height: 80vh;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .App-content {
+        touch-action: pan-x pan-y;
+        will-change: transform;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .swipe-indicator {
+        background-color: var(--primary-color);
+        opacity: 0.7;
+    }
+    
+    .swipe-indicator:hover {
+        opacity: 1;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .swipe-indicator {
+        opacity: 1;
+        height: 5px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .swipe-indicator,
+    .Dropdown-menu,
+    .App-content {
+        transition: none !important;
+    }
+}
+
+/* Performance optimizations */
+.Dropdown-menu,
+.App-content {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform-style: preserve-3d;
+}
+
+/* Accessibility */
+.swipe-indicator:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Loading state */
+.Dropdown-menu.is-loading .swipe-indicator {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* RTL support */
+html[dir="rtl"] .App-content.swiped {
+    transform: translateX(-250px);
+}
+
+/* Utility classes */
+.no-swipe {
+    touch-action: auto !important;
+    user-select: auto !important;
+}
