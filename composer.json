@@ -1,23 +1,37 @@
 {
     "name": "olleksi/flarum-swipe",
-    "description": "Радісно ковзай по екрану",
+    "description": "Add swipe gestures to Flarum for better mobile navigation",
+    "keywords": ["flarum", "extension", "swipe", "gestures", "mobile"],
     "type": "flarum-extension",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Olleksi",
+            "email": "your-email@example.com",
+            "homepage": "https://github.com/olleksi"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/olleksi/flarum-swipe/issues",
+        "source": "https://github.com/olleksi/flarum-swipe"
+    },
     "require": {
         "flarum/core": "^1.0"
     },
-    "extra": {
-        "flarum-extension": {
-            "title": "Swipe",
-            "icon": {
-                "name": "fas fa-arrows-alt-h",
-                "backgroundColor": "#0073e6",
-                "color": "#fff"
-            }
-        }
-    },
     "autoload": {
         "psr-4": {
-            "Olleksi\\FlarumSwipe\\": "src/"
+            "Olleksi\\Swipe\\": "src/"
+        }
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Swipe Gestures",
+            "category": "feature",
+            "icon": {
+                "name": "fas fa-hand-pointer",
+                "backgroundColor": "#e74c3c",
+                "color": "#fff"
+            }
         }
     }
 }
