@@ -6,11 +6,8 @@
 (function() {
     'use strict';
 
-    console.log('[Swipe Extension] Script loaded');
-
     // Multiple initialization attempts
     function tryInit() {
-        console.log('[Swipe Extension] Trying to initialize...');
         initSwipeGestures();
     }
 
@@ -26,9 +23,6 @@
     setTimeout(tryInit, 3000);
 
     function initSwipeGestures() {
-        console.log('[Swipe Extension] Initializing...');
-        console.log('[Swipe Extension] Body exists:', !!document.body);
-        console.log('[Swipe Extension] Dropdowns found:', document.querySelectorAll('.Dropdown-menu').length);
 
         // ===== SWIPE TO CLOSE DROPDOWNS =====
         let startY = 0;
