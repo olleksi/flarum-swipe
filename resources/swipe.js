@@ -130,7 +130,7 @@
             } else {
                 currentDropdown.style.transform = '';
                 currentDropdown.style.opacity = '';
-                currentDropdown.style.borderRadius = '16px 16px 0 0';
+                currentDropdown.style.borderRadius = '23px 23px 0 0';
                 currentDropdown.style.transition = 'all 0.2s ease';
                 
                 setTimeout(function() {
