@@ -5,10 +5,66 @@
     let isDragging = false;
     let canClose = false;
     let currentDropdown = null;
+    let dropdownIsOpen = false;
+
+    // Логування (можна видалити у продакшені)
+    const log = (msg, data) => console.log(`[Flarum Swipe] ${msg}`, data || '');
 
     function isMobileScreen() {
         return window.innerWidth <= 768;
     }
+
+   
+    // ПЕРЕХОПЛЮЄМО МЕТОДИ DROPDOWN
+    function interceptDropdownMethods() {
+        const dropdowns = document.querySelectorAll('.Dropdown-menu');
+        
+        dropdowns.forEach(dropdown => {
+            const origShow = dropdown.show;
+            const origHide = dropdown.hide;
+            const origToggle = dropdown.toggle;
+            
+            if (typeof origShow === 'function') {
+                dropdown.show = function() {
+                    dropdownIsOpen = true;
+                    return origShow.call(this);
+                };
+            }
+            
+            if (typeof origHide === 'function') {
+                dropdown.hide = function() {
+                    dropdownIsOpen = false;
+                    return origHide.call(this);
+                };
+            }
+            
+            if (typeof origToggle === 'function') {
+                dropdown.toggle = function() {
+                    return origToggle.call(this);
+                };
+            }
+        });
+    }
+
+    // Логуємо клік события для отримання інформації про toggle
+    document.addEventListener('click', (e) => {
+        const dropdown = e.target.closest('.Dropdown-menu');
+        const toggle = e.target.closest('[data-toggle="dropdown"], .Dropdown-toggle');
+        
+        if (dropdown) {
+            log('Click inside dropdown', { className: dropdown.className });
+        }
+        if (toggle) {
+            log('Click on dropdown toggle', { 
+                toggleClass: toggle.className,
+                text: toggle.textContent?.substring(0, 50)
+            });
+        }
+        
+        if (!dropdown && !toggle) {
+            log('Click OUTSIDE dropdown - closing triggered');
+        }
+    }, true);
 
     // ===== SWIPE TO CLOSE ДЛЯ ВСІХ DROPDOWN =====
     
@@ -16,17 +72,13 @@
         const dropdowns = document.querySelectorAll('.Dropdown-menu');
         
         dropdowns.forEach(dropdown => {
-            // Додаємо індикаторну полоску, якщо її ще немає
             if (!dropdown.querySelector('.swipe-indicator')) {
                 const indicator = document.createElement('div');
                 indicator.className = 'swipe-indicator';
                 dropdown.insertBefore(indicator, dropdown.firstChild);
             }
             
-            // Застосовуємо закруглені кути
             dropdown.style.borderRadius = '23px 23px 0 0';
-            
-            // Скидаємо стилі при кожному відкритті
             dropdown.style.transform = '';
             dropdown.style.opacity = '';
             dropdown.style.transition = '';
@@ -42,7 +94,6 @@
     }
 
     function handleTouchStart(e) {
-        // Не обробляємо якщо це мобільне меню або Scrubber-info
         if (e.target.closest('.mobile-nav-menu') || e.target.closest('.Scrubber-info')) {
             return;
         }
@@ -55,7 +106,6 @@
         
         canClose = currentDropdown.scrollTop === 0;
         
-        // Додаємо активний стан для плавної анімації
         if (canClose) {
             currentDropdown.style.transition = 'none';
         }
@@ -64,7 +114,6 @@
     function handleTouchMove(e) {
         if (!isDragging || !currentDropdown) return;
         
-        // Не обробляємо якщо це Scrubber-scrollbar
         if (e.target.closest('.Scrubber-scrollbar') || e.target.closest('.mobile-nav-menu')) {
             return;
         }
@@ -82,7 +131,6 @@
             currentDropdown.style.transform = `translateY(${deltaY}px)`;
             currentDropdown.style.opacity = Math.max(0.3, 1 - progress);
             
-            // Анімація закруглення кутів - зменшуємо при свайпі
             const borderRadius = Math.max(8, 16 - (progress * 8));
             currentDropdown.style.borderRadius = `${borderRadius}px ${borderRadius}px 0 0`;
         }
@@ -92,35 +140,43 @@
         if (!isDragging || !currentDropdown) return;
         
         const deltaY = currentY - startY;
+        const dropdownRef = currentDropdown;
         const dropdownParent = currentDropdown.parentElement;
         
         if (deltaY > 80 && canClose) {
-            currentDropdown.style.transform = `translateY(100vh)`;
-            currentDropdown.style.opacity = '0';
-            currentDropdown.style.borderRadius = '8px 8px 0 0';
-            currentDropdown.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            log('Closing dropdown via swipe');
+            dropdownRef.style.transform = `translateY(100vh)`;
+            dropdownRef.style.opacity = '0';
+            dropdownRef.style.borderRadius = '8px 8px 0 0';
+            dropdownRef.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             
             setTimeout(() => {
-                if (dropdownParent) {
-                    dropdownParent.classList.remove('open');
-                }
-                // Обов'язково скидаємо стилі після закриття
+                // Симулюємо клік за межами дропдауну - це спустить фларум логіку закриття
+                log('Simulating click outside dropdown to trigger Flarum close logic');
+                const clickEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                });
+                document.body.dispatchEvent(clickEvent);
+                
+                dropdownIsOpen = false;
+                
                 setTimeout(() => {
-                    currentDropdown.style.transform = '';
-                    currentDropdown.style.opacity = '';
-                    currentDropdown.style.transition = '';
-                    currentDropdown.style.borderRadius = '16px 16px 0 0';
+                    dropdownRef.style.transform = '';
+                    dropdownRef.style.opacity = '';
+                    dropdownRef.style.transition = '';
+                    dropdownRef.style.borderRadius = '16px 16px 0 0';
                 }, 50);
             }, 300);
         } else {
-            // Повертаємо до початкового стану
-            currentDropdown.style.transform = '';
-            currentDropdown.style.opacity = '';
-            currentDropdown.style.borderRadius = '16px 16px 0 0';
-            currentDropdown.style.transition = 'all 0.2s ease';
+            dropdownRef.style.transform = '';
+            dropdownRef.style.opacity = '';
+            dropdownRef.style.borderRadius = '16px 16px 0 0';
+            dropdownRef.style.transition = 'all 0.2s ease';
             
             setTimeout(() => {
-                currentDropdown.style.transition = '';
+                dropdownRef.style.transition = '';
             }, 200);
         }
         
@@ -128,22 +184,17 @@
         currentDropdown = null;
     }
 
-    // Обробники для миші
     function setupMouseHandlers() {
         const dropdowns = document.querySelectorAll('.Dropdown-menu');
         
         dropdowns.forEach(dropdown => {
-            // Додаємо індикаторну полоску, якщо її ще немає
             if (!dropdown.querySelector('.swipe-indicator')) {
                 const indicator = document.createElement('div');
                 indicator.className = 'swipe-indicator';
                 dropdown.insertBefore(indicator, dropdown.firstChild);
             }
             
-            // Застосовуємо закруглені кути
             dropdown.style.borderRadius = '16px 16px 0 0';
-            
-            // Скидаємо стилі
             dropdown.style.transform = '';
             dropdown.style.opacity = '';
             dropdown.style.transition = '';
@@ -154,7 +205,6 @@
     }
 
     function handleMouseDown(e) {
-        // Не обробляємо якщо це мобільне меню або Scrubber-scrollbar
         if (e.target.closest('.mobile-nav-menu') || e.target.closest('.Scrubber-scrollbar')) {
             return;
         }
@@ -186,7 +236,6 @@
             currentDropdown.style.transform = `translateY(${deltaY}px)`;
             currentDropdown.style.opacity = Math.max(0.3, 1 - progress);
             
-            // Анімація закруглення кутів
             const borderRadius = Math.max(8, 16 - (progress * 8));
             currentDropdown.style.borderRadius = `${borderRadius}px ${borderRadius}px 0 0`;
         }
@@ -196,33 +245,43 @@
         if (!isDragging || !currentDropdown) return;
         
         const deltaY = currentY - startY;
+        const dropdownRef = currentDropdown;
         const dropdownParent = currentDropdown.parentElement;
         
         if (deltaY > 80 && canClose) {
-            currentDropdown.style.transform = `translateY(100vh)`;
-            currentDropdown.style.opacity = '0';
-            currentDropdown.style.borderRadius = '8px 8px 0 0';
-            currentDropdown.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            log('Closing dropdown via mouse drag');
+            dropdownRef.style.transform = `translateY(100vh)`;
+            dropdownRef.style.opacity = '0';
+            dropdownRef.style.borderRadius = '8px 8px 0 0';
+            dropdownRef.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
             
             setTimeout(() => {
-                if (dropdownParent) {
-                    dropdownParent.classList.remove('open');
-                }
+                // Симулюємо клік за межами дропдауну - це спустить фларум логіку закриття
+                log('Simulating click outside dropdown to trigger Flarum close logic');
+                const clickEvent = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                });
+                document.body.dispatchEvent(clickEvent);
+                
+                dropdownIsOpen = false;
+                
                 setTimeout(() => {
-                    currentDropdown.style.transform = '';
-                    currentDropdown.style.opacity = '';
-                    currentDropdown.style.transition = '';
-                    currentDropdown.style.borderRadius = '16px 16px 0 0';
+                    dropdownRef.style.transform = '';
+                    dropdownRef.style.opacity = '';
+                    dropdownRef.style.transition = '';
+                    dropdownRef.style.borderRadius = '16px 16px 0 0';
                 }, 50);
             }, 300);
         } else {
-            currentDropdown.style.transform = '';
-            currentDropdown.style.opacity = '';
-            currentDropdown.style.borderRadius = '16px 16px 0 0';
-            currentDropdown.style.transition = 'all 0.2s ease';
+            dropdownRef.style.transform = '';
+            dropdownRef.style.opacity = '';
+            dropdownRef.style.borderRadius = '16px 16px 0 0';
+            dropdownRef.style.transition = 'all 0.2s ease';
             
             setTimeout(() => {
-                currentDropdown.style.transition = '';
+                dropdownRef.style.transition = '';
             }, 200);
         }
         
@@ -232,14 +291,11 @@
         document.removeEventListener('mouseup', handleMouseUp);
     }
 
-   
-    // Ініціалізація swipe функціоналу
     function initSwipe() {
-        addSwipeIndicatorStyles();
         setupSwipeToClose();
         setupMouseHandlers();
+        interceptDropdownMethods();
         
-        // Оновлюємо при зміні розміру вікна
         window.addEventListener('resize', () => {
             setTimeout(() => {
                 setupSwipeToClose();
@@ -248,32 +304,12 @@
         });
     }
 
-    // Mutation Observer для swipe
     const swipeObserver = new MutationObserver(function(mutations) {
         let shouldUpdateSwipe = false;
         
         mutations.forEach(function(mutation) {
             if (mutation.type === 'childList') {
                 shouldUpdateSwipe = true;
-            }
-            
-            // Перевіряємо відкриття dropdown
-            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                if (mutation.target.classList.contains('Dropdown-menu') && 
-                    mutation.target.classList.contains('open')) {
-                    // Скидаємо стилі при відкритті
-                    mutation.target.style.transform = '';
-                    mutation.target.style.opacity = '';
-                    mutation.target.style.transition = '';
-                    mutation.target.style.borderRadius = '16px 16px 0 0';
-                    
-                    // Додаємо індикатор, якщо його немає
-                    if (!mutation.target.querySelector('.swipe-indicator')) {
-                        const indicator = document.createElement('div');
-                        indicator.className = 'swipe-indicator';
-                        mutation.target.insertBefore(indicator, mutation.target.firstChild);
-                    }
-                }
             }
         });
         
@@ -285,7 +321,6 @@
         }
     });
     
-    // Чекаємо поки document.body буде готовим
     function startObserver() {
         if (!document.body) {
             setTimeout(startObserver, 100);
@@ -293,22 +328,19 @@
         }
         swipeObserver.observe(document.body, {
             childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['class']
+            subtree: true
         });
     }
     
     startObserver();
 
-    // Запуск
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initSwipe);
     } else {
         initSwipe();
     }
 
-    // ===== ОСНОВНИЙ SWIPE ФУНКЦІОНАЛ =====
+    // ===== ОСНОВНИЙ SWIPE ФУНКЦІОНАЛ ФЛАРУМУ =====
 
     document.addEventListener('touchstart', handleNavTouchStart, false);
     document.addEventListener('touchmove', handleNavTouchMove, false);
@@ -321,11 +353,16 @@
     let isSwiping = false;
     let hasReachedThreshold = false;
 
-    const swipeRightThreshold = 200; // Поріг для свайпу вправо
-    const swipeLeftThreshold = -140; // Поріг для свайпу вліво
-    const swipeIgnoreThreshold = 90; // Мінімальний поріг для ігнорування маленьких рухів
+    const swipeRightThreshold = 200;
+    const swipeLeftThreshold = -140;
+    const swipeIgnoreThreshold = 90;
 
     function handleNavTouchStart(evt) {
+        if (dropdownIsOpen) {
+            log('Global swipe blocked: dropdown is open');
+            return;
+        }
+
         if (evt.target.closest('.Dropdown-toggle') || evt.target.closest('.navigation') || evt.target.closest('.modal') || evt.target.closest('.Dropdown-menu') || evt.target.closest('button') || evt.target.closest('textarea') || evt.target.closest('input')) {
             return;
         }
@@ -338,6 +375,10 @@
     }
 
     function handleNavTouchMove(evt) {
+        if (dropdownIsOpen) {
+            return;
+        }
+
         if (!xStart || !isSwiping) {
             return;
         }
@@ -345,21 +386,17 @@
         let xEnd = evt.touches[0].clientX;
         let yEnd = evt.touches[0].clientY;
 
-        // Розрахунок різниці між початковими і поточними координатами
         xDiff = xEnd - xStart;
         yDiff = yEnd - yStart;
 
-        // Якщо рух в основному вертикальний, ігноруємо його
         if (Math.abs(xDiff) < Math.abs(yDiff)) {
             return;
         }
 
-        // Ігноруємо маленькі горизонтальні рухи
         if (Math.abs(xDiff) < swipeIgnoreThreshold) {
             return;
         }
 
-        // Обробка рухів вправо
         if (xDiff > 0) {
             document.querySelectorAll('.App-content').forEach(function (content) {
                 content.style.transform = `translateX(${xDiff}px)`;
@@ -371,12 +408,9 @@
                 }
             });
         }
-        // Обробка рухів вліво
         else if (xDiff < 0) {
             if (window.location.pathname === '/') {
-                // Свайп вліво тільки на головній сторінці
                 document.querySelectorAll('.App-content').forEach(function (content) {
-                    // Анімація зсуву вліво з поворотом
                     content.style.transform = `translateX(${xDiff}px) rotateY(${xDiff/10}deg)`;
                     content.style.opacity = 1 - Math.abs(xDiff) / 500;
 
@@ -386,12 +420,10 @@
                     }
                 });
             } else if (hasReachedThreshold) {
-                // Свайп вліво на інших сторінках — повернення анімації на місце
                 document.querySelectorAll('.App-content').forEach(function (content) {
                     content.style.transform = `translateX(${xDiff}px)`;
                     content.style.opacity = 1 - Math.abs(xDiff) / (2 * Math.abs(swipeLeftThreshold));
 
-                    // Якщо рух вліво, але ми не досягли порогу, скидаємо елементи
                     if (Math.abs(xDiff) < swipeRightThreshold) {
                         content.style.transform = `translateX(0)`;
                         content.style.opacity = 1;
@@ -402,9 +434,12 @@
     }
 
     function handleNavTouchEnd(evt) {
+        if (dropdownIsOpen) {
+            return;
+        }
+
         if (isSwiping) {
             if (hasReachedThreshold) {
-                // Свайп вправо - натискання на кнопку для повернення
                 if (xDiff > 0) {
                     const button = document.querySelector('.Button-label');
                     if (button) {
@@ -412,33 +447,24 @@
                         setTimeout(removeSwipeClasses, 300);
                     }
                 } 
-                // Свайп вліво - лише на головній сторінці
                 else if (xDiff < 0 && window.location.pathname === '/') {
-                    // АНІМАЦІЯ ГОРТАННЯ СТОРІНОК
                     document.querySelectorAll('.App-content').forEach(function (content) {
-                        // Поточна сторінка з'їжджає вліво
                         content.style.transition = 'transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.4s ease-out';
                         content.style.transform = 'translateX(-100%) rotateY(-15deg)';
                         content.style.opacity = '0';
                     });
 
-                    // Переміщаємо на сторінку /all
-                    if (typeof app !== 'undefined' && app.history) {
-                        app.history.push('/all');
-                    } else {
-                        window.location.href = '/all';
+                    if (typeof m !== 'undefined' && m.route) {
+                        m.route.set('/all');
                     }
 
-                    // Додаємо стилі для нової сторінки, щоб вона з'являлася знизу
                     setTimeout(function() {
                         const newPageContent = document.querySelectorAll('.App-content');
                         if (newPageContent.length > 0) {
                             newPageContent.forEach(function(content) {
-                                // Спочатку встановлюємо початковий стан (знизу)
                                 content.style.transform = 'translateY(100px)';
                                 content.style.opacity = '0';
                                 
-                                // Потім анімуємо появу знизу
                                 setTimeout(function() {
                                     content.style.transition = 'transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.4s ease-out';
                                     content.style.transform = 'translateY(0)';
@@ -447,7 +473,6 @@
                             });
                         }
 
-                        // Фінальне скидання стилів
                         setTimeout(function() {
                             document.querySelectorAll('.App-content').forEach(function (content) {
                                 content.style.transition = '';
@@ -459,7 +484,6 @@
                     }, 400);
                 }
             } else {
-                // Якщо поріг не досягнутий, повертаємо елементи на місце
                 document.querySelectorAll('.App-content').forEach(function (content) {
                     content.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
                     content.style.transform = '';
